@@ -1,0 +1,19 @@
+# Modelos entrenados
+tf_saved_model/
+*.joblib
+*.h5
+*.pb
+
+# Checkpoints
+checkpoints/
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Jupyter notebooks (si se usan para experimentos)
+*.ipynb_checkpoints/
