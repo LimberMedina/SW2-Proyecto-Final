@@ -67,16 +67,16 @@ export default function UploadVideo() {
   const [errors, setErrors] = useState({}); // { campo: "mensaje" } o shape del backend
 
   /* ======= Cascada ======= */
-  const [categories, setCategories] = useState([]);
   const [catalogs, setCatalogs] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [chapters, setChapters] = useState([]);
 
   /* ======= Formulario ======= */
   const [formData, setFormData] = useState({
     titulo: "",
     descripcion: "",
-    categoria: "",
     catalogo: "",
+    categoria: "",
     capitulo: "",
     numero_orden: 1,
     duracion: "",
@@ -98,40 +98,14 @@ export default function UploadVideo() {
       navigate("/login");
       return;
     }
-    loadCategories();
+    loadCatalogs();
   }, [isAuthenticated, navigate]);
 
-  const loadCategories = async () => {
+  const loadCatalogs = async () => {
     try {
-      const data = await catalogService.getCategories(); // Ajusta internamente si tu ruta difiere
-      setCategories(data?.results || data || []);
-    } catch (e) {
-      console.error(e);
-      setCategories([]);
-      setErrors((prev) => ({
-        ...prev,
-        general: "No se pudieron cargar categorías.",
-      }));
-    }
-  };
-
-  /* ======= Cascada: al cambiar categoría ======= */
-  const handleCategoryChange = async (categoryId) => {
-    setFormData((prev) => ({
-      ...prev,
-      categoria: categoryId,
-      catalogo: "",
-      capitulo: "",
-    }));
-    setCatalogs([]);
-    setChapters([]);
-
-    if (!categoryId) return;
-
-    try {
-      // Tus ViewSets privados (admin) permiten filtrar por categoria
+      // Cargar solo catálogos DIGITALES activos
       const res = await api.get(
-        `/catalogodigital/admin/catalogos/?categoria=${categoryId}&activo=true&ordering=nombre`
+        "/catalogodigital/admin/catalogos/?tipo=DIGITAL&activo=true&ordering=nombre"
       );
       setCatalogs(res.data?.results || res.data || []);
     } catch (e) {
@@ -149,15 +123,44 @@ export default function UploadVideo() {
     setFormData((prev) => ({
       ...prev,
       catalogo: catalogId,
+      categoria: "",
       capitulo: "",
     }));
+    setCategories([]);
     setChapters([]);
 
     if (!catalogId) return;
 
     try {
+      // Cargar categorías del catálogo seleccionado
       const res = await api.get(
-        `/catalogodigital/admin/capitulos/?catalogo=${catalogId}&activo=true&ordering=numero_orden`
+        `/catalogodigital/admin/categorias/?catalogo=${catalogId}&activo=true&ordering=codigo`
+      );
+      setCategories(res.data?.results || res.data || []);
+    } catch (e) {
+      console.error(e);
+      setCategories([]);
+      setErrors((prev) => ({
+        ...prev,
+        general: "No se pudieron cargar categorías.",
+      }));
+    }
+  };
+
+  /* ======= Cascada: al cambiar categoría ======= */
+  const handleCategoryChange = async (categoryId) => {
+    setFormData((prev) => ({
+      ...prev,
+      categoria: categoryId,
+      capitulo: "",
+    }));
+    setChapters([]);
+
+    if (!categoryId) return;
+
+    try {
+      const res = await api.get(
+        `/catalogodigital/admin/capitulos/?categoria=${categoryId}&activo=true&ordering=numero_orden`
       );
       setChapters(res.data?.results || res.data || []);
     } catch (e) {
@@ -292,8 +295,8 @@ export default function UploadVideo() {
     if (!formData.titulo.trim()) newErrors.titulo = "El título es requerido.";
     if (!formData.descripcion.trim())
       newErrors.descripcion = "La descripción es requerida.";
-    if (!formData.categoria) newErrors.categoria = "La categoría es requerida.";
     if (!formData.catalogo) newErrors.catalogo = "El catálogo es requerido.";
+    if (!formData.categoria) newErrors.categoria = "La categoría es requerida.";
     if (!formData.capitulo) newErrors.capitulo = "El capítulo es requerido.";
     if (!formData.numero_orden || Number(formData.numero_orden) <= 0)
       newErrors.numero_orden = "Debe ser > 0.";
@@ -345,8 +348,8 @@ export default function UploadVideo() {
       setFormData({
         titulo: "",
         descripcion: "",
-        categoria: "",
         catalogo: "",
+        categoria: "",
         capitulo: "",
         numero_orden: 1,
         duracion: "",
@@ -627,42 +630,16 @@ export default function UploadVideo() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* CATEGORÍA */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Categoría *
-                  </label>
-                  <select
-                    name="categoria"
-                    value={formData.categoria}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Seleccionar categoría</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.categoria && (
-                    <p className="text-red-600 text-sm mt-1">
-                      {errors.categoria}
-                    </p>
-                  )}
-                </div>
-
                 {/* CATALOGO */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Catálogo *
+                    Catálogo * (Solo Digitales)
                   </label>
                   <select
                     name="catalogo"
                     value={formData.catalogo}
                     onChange={(e) => handleCatalogChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    disabled={!formData.categoria}
                   >
                     <option value="">Seleccionar catálogo</option>
                     {catalogs.map((cat) => (
@@ -678,6 +655,32 @@ export default function UploadVideo() {
                   )}
                 </div>
 
+                {/* CATEGORÍA */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Categoría *
+                  </label>
+                  <select
+                    name="categoria"
+                    value={formData.categoria}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={!formData.catalogo}
+                  >
+                    <option value="">Seleccionar categoría</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.codigo} - {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.categoria && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.categoria}
+                    </p>
+                  )}
+                </div>
+
                 {/* CAPITULO */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -688,7 +691,7 @@ export default function UploadVideo() {
                     value={formData.capitulo}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    disabled={!formData.catalogo}
+                    disabled={!formData.categoria}
                   >
                     <option value="">Seleccionar capítulo</option>
                     {chapters.map((ch) => (
@@ -787,14 +790,24 @@ export default function UploadVideo() {
         {/* Info */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-lg font-medium text-blue-900 mb-2">
-            Proceso de Revisión
+            Proceso de Revisión y Organización
           </h3>
           <ul className="text-blue-800 text-sm space-y-1">
+            <li>
+              • <strong>Orden correcto:</strong> Primero selecciona un{" "}
+              <strong>Catálogo Digital</strong>, luego una{" "}
+              <strong>Categoría</strong> y finalmente un{" "}
+              <strong>Capítulo</strong>.
+            </li>
+            <li>
+              • Solo puedes subir videos a <strong>catálogos digitales</strong>{" "}
+              (no físicos).
+            </li>
             <li>
               • Tu video será revisado por un administrador antes de ser
               publicado.
             </li>
-            <li>• Una vez aprobado, quedará visible en el catálogo.</li>
+            <li>• Una vez aprobado, quedará visible en el catálogo digital.</li>
             <li>
               • Si no eres ADMIN, tu video se crea automáticamente en estado
               REVISION.

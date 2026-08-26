@@ -36,6 +36,9 @@ class VideoListSerializer(serializers.ModelSerializer):
 
     # info básica del autor (quien sube)
     autor_info = serializers.SerializerMethodField()
+    
+    # info del capítulo con jerarquía completa (para admin)
+    capitulo_info = serializers.SerializerMethodField()
 
     # Campos para interacciones sociales (vienen anotados en queryset)
     total_likes = serializers.IntegerField(read_only=True)
@@ -53,7 +56,7 @@ class VideoListSerializer(serializers.ModelSerializer):
             'duracion_display', 'tamaño_display', 'resolucion', 'visualizaciones',
             'fecha_publicacion', 'fecha_creacion', 'activo', 'administrador',
             'ruta_categoria', 'url_video', 'url_thumbnail',
-            'autor_info',
+            'autor_info', 'capitulo_info',
             'total_likes', 'total_comentarios', 'total_guardados', 'total_compartidas',
             'usuario_ha_dado_like', 'usuario_ha_guardado', 'usuario_ha_compartido'
         ]
@@ -102,29 +105,40 @@ class VideoListSerializer(serializers.ModelSerializer):
             return obj.usuario_ha_compartido(request.user)
         return False
 
-
-class VideoDetailSerializer(VideoListSerializer):
-    """Serializer para detalle completo del video"""
-    capitulo_info = serializers.SerializerMethodField()
-
-    class Meta(VideoListSerializer.Meta):
-        fields = VideoListSerializer.Meta.fields + ['capitulo_info']
-
     def get_capitulo_info(self, obj):
-        # Jerarquía: Video -> Capitulo -> Categoria -> Catalogo
+        """Retornar jerarquía completa: Capítulo -> Categoría -> Catálogo"""
+        if not getattr(obj, 'capitulo', None):
+            return None
+        cap = obj.capitulo
+        cat = getattr(cap, 'categoria', None)
+        if not cat:
+            return {
+                'id': cap.id,
+                'nombre': cap.nombre,
+                'categoria': None
+            }
+        catalogo = getattr(cat, 'catalogo', None)
         return {
-            'id': obj.capitulo.id,
-            'nombre': obj.capitulo.nombre,
+            'id': cap.id,
+            'nombre': cap.nombre,
             'categoria': {
-                'id': obj.capitulo.categoria.id,
-                'codigo': obj.capitulo.categoria.codigo,
-                'nombre': obj.capitulo.categoria.nombre,
+                'id': cat.id,
+                'codigo': cat.codigo,
+                'nombre': cat.nombre,
                 'catalogo': {
-                    'id': obj.capitulo.categoria.catalogo.id,
-                    'nombre': obj.capitulo.categoria.catalogo.nombre,
-                }
+                    'id': catalogo.id,
+                    'nombre': catalogo.nombre,
+                    'tipo': catalogo.tipo if hasattr(catalogo, 'tipo') else 'DIGITAL',
+                } if catalogo else None
             }
         }
+
+
+class VideoDetailSerializer(VideoListSerializer):
+    """Serializer para detalle completo del video (hereda capitulo_info de VideoListSerializer)"""
+    
+    class Meta(VideoListSerializer.Meta):
+        fields = VideoListSerializer.Meta.fields  # Ya incluye capitulo_info
 
 
 class VideoCreateSerializer(serializers.ModelSerializer):
@@ -164,7 +178,7 @@ class CapituloListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Capitulo
         fields = [
-            'id', 'nombre', 'descripcion', 'fecha_creacion',
+            'id', 'nombre', 'descripcion', 'categoria', 'fecha_creacion',
             'fecha_actualizacion', 'activo', 'total_videos', 'administrador', 'categoria_info',
         ]
 
@@ -181,6 +195,7 @@ class CapituloListSerializer(serializers.ModelSerializer):
             'catalogo': {
                 'id': getattr(catalogo, 'id', None),
                 'nombre': getattr(catalogo, 'nombre', None),
+                'tipo': getattr(catalogo, 'tipo', 'DIGITAL'),
             } if catalogo else None
         }
 
@@ -218,7 +233,7 @@ class CatalogoListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Catalogo
         fields = [
-            'id', 'nombre', 'descripcion', 'fecha_creacion', 'fecha_actualizacion',
+            'id', 'nombre', 'descripcion', 'tipo', 'fecha_creacion', 'fecha_actualizacion',
             'activo', 'total_categorias', 'total_capitulos', 'total_videos', 'administrador'
         ]
 
@@ -234,7 +249,7 @@ class CatalogoCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Catalogo
-        fields = ['nombre', 'descripcion', 'activo']
+        fields = ['nombre', 'descripcion', 'tipo', 'activo']
 
     def validate(self, attrs):
         nombre = attrs.get('nombre')
@@ -266,7 +281,7 @@ class CategoriaListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
         fields = [
-            'id', 'codigo', 'nombre', 'descripcion', 'fecha_creacion',
+            'id', 'codigo', 'nombre', 'descripcion', 'catalogo', 'fecha_creacion',
             'fecha_actualizacion', 'activo', 'total_capitulos', 'total_videos',
             'administrador', 'catalogo_info'
         ]
@@ -277,6 +292,7 @@ class CategoriaListSerializer(serializers.ModelSerializer):
         return {
             'id': obj.catalogo.id,
             'nombre': obj.catalogo.nombre,
+            'tipo': obj.catalogo.tipo if hasattr(obj.catalogo, 'tipo') else 'DIGITAL',
         }
 
 
@@ -345,8 +361,13 @@ class VideoPublicoSerializer(serializers.ModelSerializer):
     duracion_display = serializers.CharField(source='get_duration_display', read_only=True)
     url_video = serializers.SerializerMethodField()
     url_thumbnail = serializers.SerializerMethodField()
+    
+    # Jerarquía completa con IDs y nombres
+    categoria_id = serializers.IntegerField(source='capitulo.categoria.id', read_only=True)
     categoria_nombre = serializers.CharField(source='capitulo.categoria.nombre', read_only=True)
+    catalogo_id = serializers.IntegerField(source='capitulo.categoria.catalogo.id', read_only=True)
     catalogo_nombre = serializers.CharField(source='capitulo.categoria.catalogo.nombre', read_only=True)
+    capitulo_id = serializers.IntegerField(source='capitulo.id', read_only=True)
     capitulo_nombre = serializers.CharField(source='capitulo.nombre', read_only=True)
 
     # Interacciones sociales (anotadas)
@@ -362,8 +383,10 @@ class VideoPublicoSerializer(serializers.ModelSerializer):
         model = Video
         fields = [
             'id', 'titulo', 'descripcion', 'duracion_display', 'visualizaciones',
-            'fecha_publicacion', 'url_video', 'url_thumbnail', 'categoria_nombre',
-            'catalogo_nombre', 'capitulo_nombre', 'total_likes', 'total_comentarios',
+            'fecha_publicacion', 'url_video', 'url_thumbnail', 
+            'categoria_id', 'categoria_nombre', 'catalogo_id', 'catalogo_nombre',
+            'capitulo_id', 'capitulo_nombre',
+            'total_likes', 'total_comentarios',
             'total_guardados', 'total_compartidas', 'usuario_ha_dado_like', 'usuario_ha_guardado',
             'usuario_ha_compartido'
         ]

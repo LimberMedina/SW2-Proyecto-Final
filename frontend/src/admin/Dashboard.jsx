@@ -12,6 +12,7 @@ import {
   faLayerGroup,
   faListUl,
   faFilm,
+  faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "../components/Button";
 import api from "../services/api";
@@ -19,6 +20,7 @@ import AdminManagement from "./AdminManagement";
 import PendingVideosReview from "./PendingVideosReview";
 import AdminAnuncios from "./AdminAnuncios";
 import AdminReports from "./AdminReports";
+import AdminUsers from "./AdminUsers";
 import SessionExpiryAlert from "../components/SessionExpiryAlert";
 
 export default function Dashboard() {
@@ -246,6 +248,7 @@ export default function Dashboard() {
     { id: "overview", label: "Resumen", icon: faHome },
     { id: "pending-videos", label: "Revisión", icon: faListUl },
     { id: "catalogs", label: "Gestión", icon: faLayerGroup },
+    { id: "users", label: "Usuarios", icon: faUsers },
     { id: "announcements", label: "Anuncios", icon: faAd },
     { id: "reports", label: "Reportes", icon: faFlag },
   ];
@@ -372,6 +375,12 @@ export default function Dashboard() {
           )}
 
           {activeTab === "catalogs" && <CatalogsTab />}
+
+          {activeTab === "users" && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <AdminUsers />
+            </div>
+          )}
 
           {activeTab === "announcements" && <AdminAnuncios />}
 

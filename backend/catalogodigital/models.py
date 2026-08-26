@@ -7,8 +7,14 @@ User = get_user_model()
 
 
 class Catalogo(models.Model):
+    TIPO_CHOICES = [
+        ('FISICO', 'Físico'),
+        ('DIGITAL', 'Digital'),
+    ]
+    
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='DIGITAL')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     activo = models.BooleanField(default=True)

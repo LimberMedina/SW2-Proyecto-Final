@@ -23,6 +23,7 @@ import Header from "../components/Header";
 import authService from "../services/authService";
 import catalogService from "../services/catalogService"; // ⬅️ usaremos helpers nuevos
 import UserLibrary from "../components/UserLibrary"; // ⬅️ nueva vista debajo del perfil
+import CatalogBackground from "../components/CatalogBackground";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -101,10 +102,10 @@ export default function Profile() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen">
       <Header />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Header del perfil */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-8">
@@ -455,6 +456,9 @@ export default function Profile() {
           />
         </div>
       </div>
+
+      {/* Fondo decorativo con marcas de agua del Canal 11 TVU */}
+      <CatalogBackground />
     </div>
   );
 }

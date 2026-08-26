@@ -291,31 +291,50 @@ const FormCapitulos = React.memo(function FormCapitulos({
   saving,
   editing,
   onCancelEdit,
+  catalogos,
   categorias,
+  onCatalogoChange,
 }) {
+  // Filtrar categorías por catálogo seleccionado
+  const categoriasFiltradas = form.catalogo
+    ? categorias.filter((cat) => cat.catalogo === parseInt(form.catalogo))
+    : [];
+
   return (
     <form onSubmit={submit} className="grid md:grid-cols-5 gap-3">
-      <Input
-        label="Nombre"
-        name="nombre"
-        value={form.nombre || ""}
-        onChange={(e) => handleChange("nombre", e.target.value)}
-        required
-      />
       <div className="md:col-span-2">
-        <label className="block text-sm text-gray-700 mb-1">Categoría</label>
+        <label className="block text-sm text-gray-700 mb-1">Catálogo *</label>
+        <select
+          className="w-full border rounded-md px-3 py-2"
+          value={form.catalogo || ""}
+          onChange={(e) => {
+            handleChange("catalogo", e.target.value);
+            handleChange("categoria", ""); // Reset categoría
+            if (onCatalogoChange) onCatalogoChange(e.target.value);
+          }}
+          required
+        >
+          <option value="">Seleccione catálogo…</option>
+          {catalogos.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre} ({c.tipo || "DIGITAL"})
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="md:col-span-2">
+        <label className="block text-sm text-gray-700 mb-1">Categoría *</label>
         <select
           className="w-full border rounded-md px-3 py-2"
           value={form.categoria || ""}
           onChange={(e) => handleChange("categoria", e.target.value)}
           required
+          disabled={!form.catalogo}
         >
-          <option value="">Seleccione…</option>
-          {categorias.map((c) => (
+          <option value="">Seleccione categoría…</option>
+          {categoriasFiltradas.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.catalogo_info?.nombre
-                ? `${c.catalogo_info.nombre} / ${c.codigo} - ${c.nombre}`
-                : `${c.codigo} - ${c.nombre}`}
+              {c.codigo} - {c.nombre}
             </option>
           ))}
         </select>
@@ -329,6 +348,15 @@ const FormCapitulos = React.memo(function FormCapitulos({
           />
           <span>Activo</span>
         </label>
+      </div>
+      <div className="md:col-span-3">
+        <Input
+          label="Nombre"
+          name="nombre"
+          value={form.nombre || ""}
+          onChange={(e) => handleChange("nombre", e.target.value)}
+          required
+        />
       </div>
       <div className="md:col-span-5">
         <label className="block text-sm text-gray-700 mb-1">Descripción</label>
@@ -360,59 +388,139 @@ const FormVideos = React.memo(function FormVideos({
   saving,
   editing,
   onCancelEdit,
+  catalogos,
+  categorias,
   capitulos,
+  onCatalogoChange,
+  onCategoriaChange,
 }) {
+  // Filtrar categorías por catálogo
+  const categoriasFiltradas = form.catalogo
+    ? categorias.filter((cat) => cat.catalogo === parseInt(form.catalogo))
+    : [];
+
+  // Filtrar capítulos por categoría
+  const capitulosFiltrados = form.categoria
+    ? capitulos.filter((cap) => cap.categoria === parseInt(form.categoria))
+    : [];
+
   return (
-    <form onSubmit={submit} className="grid md:grid-cols-4 gap-3">
-      <Input
-        label="Título"
-        name="titulo"
-        value={form.titulo || ""}
-        onChange={(e) => handleChange("titulo", e.target.value)}
-        required
-      />
-      <div>
-        <label className="block text-sm text-gray-700 mb-1">Estado</label>
-        <select
-          className="w-full border rounded-md px-3 py-2"
-          value={form.estado || "BORRADOR"}
-          onChange={(e) => handleChange("estado", e.target.value)}
-        >
-          <option value="BORRADOR">BORRADOR</option>
-          <option value="REVISION">REVISION</option>
-          <option value="PUBLICADO">PUBLICADO</option>
-          <option value="ARCHIVADO">ARCHIVADO</option>
-        </select>
-      </div>
-      <div className="md:col-span-2">
-        <label className="block text-sm text-gray-700 mb-1">Capítulo</label>
-        <select
-          className="w-full border rounded-md px-3 py-2"
-          value={form.capitulo || ""}
-          onChange={(e) => handleChange("capitulo", e.target.value)}
+    <form onSubmit={submit} className="space-y-4">
+      <div className="grid md:grid-cols-2 gap-3">
+        <Input
+          label="Título"
+          name="titulo"
+          value={form.titulo || ""}
+          onChange={(e) => handleChange("titulo", e.target.value)}
           required
-        >
-          <option value="">Seleccione…</option>
-          {capitulos.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
-          ))}
-        </select>
+        />
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">Estado</label>
+          <select
+            className="w-full border rounded-md px-3 py-2"
+            value={form.estado || "BORRADOR"}
+            onChange={(e) => handleChange("estado", e.target.value)}
+          >
+            <option value="BORRADOR">BORRADOR</option>
+            <option value="REVISION">REVISION</option>
+            <option value="PUBLICADO">PUBLICADO</option>
+            <option value="ARCHIVADO">ARCHIVADO</option>
+          </select>
+        </div>
       </div>
-      <div className="md:col-span-4">
+
+      <div className="grid md:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">Catálogo *</label>
+          <select
+            className="w-full border rounded-md px-3 py-2"
+            value={form.catalogo || ""}
+            onChange={(e) => {
+              handleChange("catalogo", e.target.value);
+              handleChange("categoria", "");
+              handleChange("capitulo", "");
+              if (onCatalogoChange) onCatalogoChange(e.target.value);
+            }}
+            required
+          >
+            <option value="">Seleccione catálogo…</option>
+            {catalogos.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} ({c.tipo || "DIGITAL"})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">
+            Categoría *
+          </label>
+          <select
+            className="w-full border rounded-md px-3 py-2"
+            value={form.categoria || ""}
+            onChange={(e) => {
+              handleChange("categoria", e.target.value);
+              handleChange("capitulo", "");
+              if (onCategoriaChange) onCategoriaChange(e.target.value);
+            }}
+            required
+            disabled={!form.catalogo}
+          >
+            <option value="">Seleccione categoría…</option>
+            {categoriasFiltradas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.codigo} - {c.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">Capítulo *</label>
+          <select
+            className="w-full border rounded-md px-3 py-2"
+            value={form.capitulo || ""}
+            onChange={(e) => handleChange("capitulo", e.target.value)}
+            required
+            disabled={!form.categoria}
+          >
+            <option value="">Seleccione capítulo…</option>
+            {capitulosFiltrados.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div>
         <label className="block text-sm text-gray-700 mb-1">Descripción</label>
         <textarea
           value={form.descripcion || ""}
           onChange={(e) => handleChange("descripcion", e.target.value)}
           className="w-full border rounded-md px-3 py-2"
-          rows={2}
+          rows={3}
         />
       </div>
-      <div className="md:col-span-4">
+
+      <div>
         <label className="block text-sm text-gray-700 mb-1">
-          Archivo de video (mp4/avi/mov/mkv/webm)
+          {editing
+            ? "Cambiar archivo de video (opcional)"
+            : "Archivo de video *"}
         </label>
+        {editing && form.url_video && (
+          <div className="mb-2 text-sm text-gray-600">
+            Video actual:{" "}
+            <a
+              href={form.url_video}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              Ver video
+            </a>
+          </div>
+        )}
         <input
           type="file"
           accept="video/*"
@@ -420,9 +528,11 @@ const FormVideos = React.memo(function FormVideos({
             handleChange("archivo_video", e.target.files?.[0] || null)
           }
           className="w-full"
+          required={!editing}
         />
       </div>
-      <div className="md:col-span-4 flex gap-2">
+
+      <div className="flex gap-2">
         <Button type="submit" disabled={saving}>
           {saving ? "Guardando…" : editing ? "Actualizar" : "Crear"}
         </Button>
@@ -487,6 +597,7 @@ const FormArea = React.memo(function FormArea({
           saving={saving}
           editing={editing}
           onCancelEdit={onCancelEdit}
+          catalogos={catalogos}
           categorias={categorias}
         />
       )}
@@ -498,6 +609,8 @@ const FormArea = React.memo(function FormArea({
           saving={saving}
           editing={editing}
           onCancelEdit={onCancelEdit}
+          catalogos={catalogos}
+          categorias={categorias}
           capitulos={capitulos}
         />
       )}
@@ -692,16 +805,29 @@ function AdminManagement({ resource, onClose }) {
         setCatalogos(parseDRFList(data));
       }
       if (resource === "capitulos") {
-        const { data } = await api.get(
-          `${ENDPOINTS.categorias}?page_size=1000&ordering=catalogo__nombre,codigo`
-        );
-        setCategorias(parseDRFList(data));
+        // Cargar catálogos y categorías
+        const [catalogosRes, categoriasRes] = await Promise.all([
+          api.get(`${ENDPOINTS.catalogos}?page_size=1000&ordering=nombre`),
+          api.get(
+            `${ENDPOINTS.categorias}?page_size=1000&ordering=catalogo__nombre,codigo`
+          ),
+        ]);
+        setCatalogos(parseDRFList(catalogosRes.data));
+        setCategorias(parseDRFList(categoriasRes.data));
       }
       if (resource === "videos") {
-        const { data } = await api.get(
-          `${ENDPOINTS.capitulos}?page_size=1000&ordering=categoria__catalogo__nombre,categoria__codigo,nombre`
-        );
-        setCapitulos(parseDRFList(data));
+        const [catalogosRes, categoriasRes, capitulosRes] = await Promise.all([
+          api.get(`${ENDPOINTS.catalogos}?page_size=1000&ordering=nombre`),
+          api.get(
+            `${ENDPOINTS.categorias}?page_size=1000&ordering=catalogo__nombre,codigo`
+          ),
+          api.get(
+            `${ENDPOINTS.capitulos}?page_size=1000&ordering=categoria__catalogo__nombre,categoria__codigo,nombre`
+          ),
+        ]);
+        setCatalogos(parseDRFList(catalogosRes.data));
+        setCategorias(parseDRFList(categoriasRes.data));
+        setCapitulos(parseDRFList(capitulosRes.data));
       }
     } catch {
       // silencioso
@@ -791,9 +917,12 @@ function AdminManagement({ resource, onClose }) {
           activo: !!item.activo,
         });
       } else if (resource === "capitulos") {
+        const catInfo = item.categoria_info || item.categoria;
+        const catalogoId = catInfo?.catalogo?.id || catInfo?.catalogo || "";
         setForm({
           nombre: item.nombre || "",
           descripcion: item.descripcion || "",
+          catalogo: catalogoId,
           categoria:
             item.categoria?.id ??
             item.categoria_info?.id ??
@@ -802,12 +931,23 @@ function AdminManagement({ resource, onClose }) {
           activo: !!item.activo,
         });
       } else if (resource === "videos") {
+        const capInfo = item.capitulo_info || item.capitulo;
+        const catInfo = capInfo?.categoria_info || capInfo?.categoria;
+        const catalogoId = catInfo?.catalogo?.id || catInfo?.catalogo || "";
+        const categoriaId =
+          capInfo?.categoria?.id || capInfo?.categoria || catInfo?.id || "";
+        const capituloId =
+          item.capitulo?.id ?? item.capitulo_info?.id ?? item.capitulo ?? "";
+
         setForm({
           titulo: item.titulo || "",
           descripcion: item.descripcion || "",
           estado: item.estado || "BORRADOR",
-          capitulo: item.capitulo?.id ?? item.capitulo ?? "",
+          catalogo: catalogoId,
+          categoria: categoriaId,
+          capitulo: capituloId,
           archivo_video: null,
+          url_video: item.url_video || "",
         });
       }
       setShowForm(true);

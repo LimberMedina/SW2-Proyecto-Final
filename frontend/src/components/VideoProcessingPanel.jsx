@@ -160,17 +160,6 @@ export default function VideoProcessingPanel({ video, isOpen, onClose }) {
             <FontAwesomeIcon icon={faChartLine} className="mr-2" />
             Análisis
           </button>
-          <button
-            onClick={() => setActiveTab("thumbnail")}
-            className={`flex-1 py-4 px-6 font-medium transition-all ${
-              activeTab === "thumbnail"
-                ? "bg-white text-green-600 border-b-2 border-green-600"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <FontAwesomeIcon icon={faImage} className="mr-2" />
-            Thumbnail
-          </button>
         </div>
 
         {/* Content */}

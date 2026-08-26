@@ -16,6 +16,7 @@ import { useAuth } from "../hooks/useAuth.jsx";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
+import CatalogBackground from "../components/CatalogBackground";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -217,8 +218,8 @@ export default function Register() {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 relative z-10">
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-4">
@@ -447,6 +448,9 @@ export default function Register() {
           </Link>
         </div>
       </div>
+
+      {/* Fondo decorativo con marcas de agua del Canal 11 TVU */}
+      <CatalogBackground />
     </div>
   );
 }

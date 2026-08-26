@@ -14,7 +14,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../hooks/useAuth";
 import Button from "./Button";
-import { useNotifications } from "../hooks/useNotifications"; // <-- NUEVO
+import { useNotifications } from "../hooks/useNotifications";
+// Usamos el logo estático en public/img/logoTVU.jpg
 
 export default function Header() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -104,21 +105,32 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo y marca */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <FontAwesomeIcon
-                  icon={faVideo}
-                  className="text-white text-lg"
-                />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-gray-900">
-                  Videoteca UAGRM
-                </h1>
-                <p className="text-xs text-gray-500">Canal Universitario</p>
-              </div>
+          <div className="flex items-center space-x-8">
+            <Link to="/" className="flex items-center">
+              <img
+                src="/img/logoTVU.jpg"
+                alt="Canal 11 TVU"
+                className="h-10 sm:h-12 object-contain"
+              />
             </Link>
+
+            {/* Navbar */}
+            <nav className="hidden md:flex items-center space-x-1">
+              <Link
+                to="/Catalog"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                Catálogo
+              </Link>
+              {isAuthenticated && (
+                <Link
+                  to="/recommendations"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  Recomendaciones
+                </Link>
+              )}
+            </nav>
           </div>
 
           {/* Acciones del usuario */}
@@ -235,7 +247,7 @@ export default function Header() {
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                   className="flex items-center space-x-2 bg-gray-50 hover:bg-gray-100 rounded-full pl-3 pr-2 py-2 transition-colors duration-200"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-red-600 to-blue-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-semibold">
                       {user?.nombre?.charAt(0)?.toUpperCase() ||
                         user?.username?.charAt(0)?.toUpperCase() ||
@@ -257,7 +269,7 @@ export default function Header() {
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                     <div className="px-4 py-3 border-b border-gray-100">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-blue-600 rounded-full flex items-center justify-center">
                           <span className="text-white font-semibold">
                             {user?.nombre?.charAt(0)?.toUpperCase() ||
                               user?.username?.charAt(0)?.toUpperCase() ||
@@ -277,7 +289,7 @@ export default function Header() {
                           <span
                             className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                               user?.rol === "ADMIN"
-                                ? "bg-purple-100 text-purple-800"
+                                ? "bg-red-100 text-red-800"
                                 : "bg-blue-100 text-blue-800"
                             }`}
                           >
@@ -318,7 +330,7 @@ export default function Header() {
                 <Link to="/register">
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    className="bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-700 hover:to-blue-700"
                   >
                     Registrarse
                   </Button>

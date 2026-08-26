@@ -36,6 +36,7 @@ import SmartSearchBar from "../components/SmartSearchBar";
 import SessionExpiryAlert from "../components/SessionExpiryAlert";
 import VideoProcessingPanel from "../components/VideoProcessingPanel";
 import ShareModal from "../components/ShareModal";
+import CatalogBackground from "../components/CatalogBackground";
 import catalogService from "../services/catalogService";
 import { useAuth } from "../hooks/useAuth";
 import api from "../services/api";
@@ -177,6 +178,7 @@ export default function Catalog() {
 
   const handleFilterChange = (category) => {
     setCategoryFilter(category);
+    // Aplicar filtros inmediatamente
     filterVideos(searchQuery, category);
   };
 
@@ -184,7 +186,7 @@ export default function Catalog() {
     let filtered = [...allVideos];
 
     // Filtrar por búsqueda
-    if (query.trim()) {
+    if (query && query.trim()) {
       const lowerQuery = query.toLowerCase();
       filtered = filtered.filter(
         (v) =>
@@ -196,10 +198,22 @@ export default function Catalog() {
     }
 
     // Filtrar por categoría
-    if (category) {
-      filtered = filtered.filter(
-        (v) => v.categoria_id?.toString() === category
-      );
+    if (category && category.trim() && category !== "") {
+      filtered = filtered.filter((v) => {
+        const catId =
+          v.categoria_id?.toString() || v.categoria?.toString() || "";
+        const videoCategoriaNombre = (v.categoria_nombre || "").toLowerCase();
+        const videoCatalogoNombre = (v.catalogo_nombre || "").toLowerCase();
+        const filterStr = category.toString();
+        const filterLower = category.toLowerCase();
+
+        // Comparar por ID exacto o por nombre (con includes para flexibilidad)
+        return (
+          catId === filterStr ||
+          videoCategoriaNombre.includes(filterLower) ||
+          videoCatalogoNombre.includes(filterLower)
+        );
+      });
     }
 
     setVideos(filtered);
@@ -355,19 +369,13 @@ export default function Catalog() {
     const handleLike = async () => {
       if (!guardAuth() || likeLoading) return;
       setLikeLoading(true);
-      const prevLiked = isLiked;
-      const prevLikes = likes;
-      const nextLiked = !prevLiked;
-      const nextLikes = prevLikes + (nextLiked ? 1 : -1);
-      setIsLiked(nextLiked);
-      setLikes(Math.max(0, nextLikes));
       try {
         const result = await catalogService.toggleLike(video.id);
+        // Actualizar estado basado SOLO en la respuesta del servidor
         setIsLiked(!!result.liked);
-        setLikes(result.total_likes ?? Math.max(0, nextLikes));
+        setLikes(result.total_likes || 0);
       } catch (error) {
-        setIsLiked(prevLiked);
-        setLikes(prevLikes);
+        console.error("Error al dar like:", error);
         if (error?.response?.status === 401) {
           alert("Inicia sesión para dar like.");
         } else {
@@ -1019,12 +1027,12 @@ export default function Catalog() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen">
       <Header />
       <SessionExpiryAlert />
 
-      {/* Encabezado de página con búsqueda inteligente */}
-      <div className="bg-white shadow-sm border-b">
+      {/* Encabezado de página con búsqueda inteligente - STICKY */}
+      <div className="sticky top-16 z-40 bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <SmartSearchBar
             onSearch={handleSearch}
@@ -1126,21 +1134,8 @@ export default function Catalog() {
         description={shareData.description}
       />
 
-      {/* Watermarks de fondo */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-10">
-        <div className="absolute top-1/4 left-1/4">
-          <FontAwesomeIcon icon={faCamera} className="text-9xl text-gray-400" />
-        </div>
-        <div className="absolute top-1/2 right-1/4">
-          <FontAwesomeIcon icon={faVideo} className="text-8xl text-gray-400" />
-        </div>
-        <div className="absolute bottom-1/4 left-1/2">
-          <FontAwesomeIcon icon={faFilm} className="text-7xl text-gray-400" />
-        </div>
-        <div className="absolute top-3/4 right-1/2">
-          <FontAwesomeIcon icon={faCamera} className="text-6xl text-gray-400" />
-        </div>
-      </div>
+      {/* Fondo decorativo con marcas de agua del Canal 11 TVU */}
+      <CatalogBackground />
     </div>
   );
 }

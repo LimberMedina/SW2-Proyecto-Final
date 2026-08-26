@@ -599,13 +599,14 @@ class CategoriaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class VideoPublicoViewSet(viewsets.ReadOnlyModelViewSet):
-    """Videos públicos publicados"""
+    """Videos públicos publicados (solo de catálogos DIGITALES)"""
     queryset = Video.objects.filter(
         activo=True,
         estado='PUBLICADO',
         capitulo__activo=True,
         capitulo__categoria__activo=True,
-        capitulo__categoria__catalogo__activo=True
+        capitulo__categoria__catalogo__activo=True,
+        capitulo__categoria__catalogo__tipo='DIGITAL'  # Solo catálogos digitales
     ).select_related(
         'capitulo__categoria__catalogo'
     ).annotate(
@@ -1113,29 +1114,110 @@ class CompartirVideoViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ReportesView(viewsets.ViewSet):
-    """Vista para reportes administrativos"""
+    """Vista para reportes administrativos con filtros dinámicos"""
     permission_classes = [IsAdminRole]
 
     @action(detail=False, methods=['get'])
     def reportes(self, request):
-        # Videos por mes
+        from datetime import datetime, timedelta
+        from django.db.models.functions import TruncDay, TruncWeek, TruncQuarter, TruncYear
+        from django.utils.timezone import make_aware
+        
+        # Parámetros de filtro
+        metrica = request.query_params.get('metrica', 'vistas')  # vistas, likes, comentarios, compartidos
+        periodo = request.query_params.get('periodo', 'mes')  # dia, mes, trimestre, año
+        fecha_inicio_str = request.query_params.get('fecha_inicio')
+        fecha_fin_str = request.query_params.get('fecha_fin')
+        
+        # Establecer fechas por defecto (últimos 6 meses)
+        if not fecha_fin_str:
+            fecha_fin = timezone.now()
+        else:
+            # Parsear fecha y hacerla timezone-aware
+            fecha_fin = datetime.fromisoformat(fecha_fin_str.replace('Z', ''))
+            fecha_fin = make_aware(fecha_fin) if timezone.is_naive(fecha_fin) else fecha_fin
+            
+        if not fecha_inicio_str:
+            fecha_inicio = fecha_fin - timedelta(days=180)
+        else:
+            # Parsear fecha y hacerla timezone-aware
+            fecha_inicio = datetime.fromisoformat(fecha_inicio_str.replace('Z', ''))
+            fecha_inicio = make_aware(fecha_inicio) if timezone.is_naive(fecha_inicio) else fecha_inicio
+        
+        # Determinar la función de truncamiento según el periodo
+        trunc_func_map = {
+            'dia': TruncDay,
+            'mes': TruncMonth,
+            'trimestre': TruncQuarter,
+            'año': TruncYear,
+        }
+        trunc_func = trunc_func_map.get(periodo, TruncMonth)
+        
+        # Mapear métrica al modelo correspondiente
+        metrica_model_map = {
+            'vistas': VisualizacionVideo,
+            'likes': LikeVideo,
+            'comentarios': ComentarioVideo,
+            'compartidos': CompartirVideo,
+        }
+        
+        # Datos por periodo según métrica seleccionada
+        model = metrica_model_map.get(metrica, VisualizacionVideo)
+        fecha_field = 'fecha_visualizacion' if metrica == 'vistas' else 'fecha_creacion'
+        
+        datos_por_periodo = model.objects.filter(
+            **{f'{fecha_field}__gte': fecha_inicio, f'{fecha_field}__lte': fecha_fin}
+        ).annotate(
+            periodo_fecha=trunc_func(fecha_field)
+        ).values('periodo_fecha').annotate(
+            cantidad=Count('id')
+        ).order_by('periodo_fecha')
+        
+        # Videos por mes (siempre mostrar)
         videos_por_mes = Video.objects.filter(
             activo=True,
-            estado='PUBLICADO'
+            estado='PUBLICADO',
+            fecha_creacion__gte=fecha_inicio,
+            fecha_creacion__lte=fecha_fin
         ).annotate(
             mes=TruncMonth('fecha_creacion')
         ).values('mes').annotate(
             cantidad=Count('id')
         ).order_by('mes')
 
-        # Reacciones por tipo
+        # Reacciones por tipo (con filtro de fechas)
         reacciones_por_tipo = [
-            {'tipo': 'likes', 'cantidad': LikeVideo.objects.count()},
-            {'tipo': 'comentarios', 'cantidad': ComentarioVideo.objects.count()},
-            {'tipo': 'compartidos', 'cantidad': CompartirVideo.objects.count()},
+            {
+                'tipo': 'vistas', 
+                'cantidad': VisualizacionVideo.objects.filter(
+                    fecha_visualizacion__gte=fecha_inicio,
+                    fecha_visualizacion__lte=fecha_fin
+                ).count()
+            },
+            {
+                'tipo': 'likes', 
+                'cantidad': LikeVideo.objects.filter(
+                    fecha_creacion__gte=fecha_inicio,
+                    fecha_creacion__lte=fecha_fin
+                ).count()
+            },
+            {
+                'tipo': 'comentarios', 
+                'cantidad': ComentarioVideo.objects.filter(
+                    fecha_creacion__gte=fecha_inicio,
+                    fecha_creacion__lte=fecha_fin
+                ).count()
+            },
+            {
+                'tipo': 'compartidos', 
+                'cantidad': CompartirVideo.objects.filter(
+                    fecha_creacion__gte=fecha_inicio,
+                    fecha_creacion__lte=fecha_fin
+                ).count()
+            },
         ]
 
-        # Videos por categoria
+        # Videos por categoria (con filtro de fechas)
         videos_por_categoria = Categoria.objects.filter(
             activo=True
         ).annotate(
@@ -1144,20 +1226,45 @@ class ReportesView(viewsets.ViewSet):
                 filter=Q(
                     capitulos__activo=True,
                     capitulos__videos__activo=True,
-                    capitulos__videos__estado='PUBLICADO'
+                    capitulos__videos__estado='PUBLICADO',
+                    capitulos__videos__fecha_creacion__gte=fecha_inicio,
+                    capitulos__videos__fecha_creacion__lte=fecha_fin
                 )
             )
-        ).values('nombre', 'cantidad_videos').order_by('-cantidad_videos')
+        ).values('nombre', 'cantidad_videos').order_by('-cantidad_videos')[:10]
 
-        # Totales
-        total_videos = Video.objects.filter(activo=True, estado='PUBLICADO').count()
-        total_usuarios = User.objects.count()
-        total_visualizaciones = VisualizacionVideo.objects.count()
-        total_comentarios = ComentarioVideo.objects.count()
-        total_likes = LikeVideo.objects.count()
-        total_compartidos = CompartirVideo.objects.count()
+        # Totales (con filtro de fechas)
+        total_videos = Video.objects.filter(
+            activo=True, 
+            estado='PUBLICADO',
+            fecha_creacion__gte=fecha_inicio,
+            fecha_creacion__lte=fecha_fin
+        ).count()
+        total_usuarios = User.objects.filter(
+            date_joined__gte=fecha_inicio,
+            date_joined__lte=fecha_fin
+        ).count()
+        total_visualizaciones = VisualizacionVideo.objects.filter(
+            fecha_visualizacion__gte=fecha_inicio,
+            fecha_visualizacion__lte=fecha_fin
+        ).count()
+        total_comentarios = ComentarioVideo.objects.filter(
+            fecha_creacion__gte=fecha_inicio,
+            fecha_creacion__lte=fecha_fin
+        ).count()
+        total_likes = LikeVideo.objects.filter(
+            fecha_creacion__gte=fecha_inicio,
+            fecha_creacion__lte=fecha_fin
+        ).count()
+        total_compartidos = CompartirVideo.objects.filter(
+            fecha_creacion__gte=fecha_inicio,
+            fecha_creacion__lte=fecha_fin
+        ).count()
 
         data = {
+            'datos_por_periodo': list(datos_por_periodo),
+            'metrica_actual': metrica,
+            'periodo_actual': periodo,
             'videos_por_mes': list(videos_por_mes),
             'reacciones_por_tipo': reacciones_por_tipo,
             'videos_por_categoria': list(videos_por_categoria),
@@ -1167,6 +1274,9 @@ class ReportesView(viewsets.ViewSet):
             'total_comentarios': total_comentarios,
             'total_likes': total_likes,
             'total_compartidos': total_compartidos,
+            'fecha_inicio': fecha_inicio.isoformat(),
+            'fecha_fin': fecha_fin.isoformat(),
         }
 
         return Response(data)
+

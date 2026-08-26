@@ -11,7 +11,7 @@ const FormCatalogos = React.memo(function FormCatalogos({
   onCancelEdit,
 }) {
   return (
-    <form onSubmit={submit} className="grid md:grid-cols-4 gap-3">
+    <form onSubmit={submit} className="grid md:grid-cols-5 gap-3">
       <Input
         label="Nombre"
         name="nombre"
@@ -19,6 +19,18 @@ const FormCatalogos = React.memo(function FormCatalogos({
         onChange={(e) => handleChange("nombre", e.target.value)}
         required
       />
+      <div>
+        <label className="block text-sm text-gray-700 mb-1">Tipo *</label>
+        <select
+          className="w-full border rounded-md px-3 py-2"
+          value={form.tipo || "DIGITAL"}
+          onChange={(e) => handleChange("tipo", e.target.value)}
+          required
+        >
+          <option value="DIGITAL">Digital</option>
+          <option value="FISICO">Físico</option>
+        </select>
+      </div>
       <div className="md:col-span-2">
         <label className="block text-sm text-gray-700 mb-1">Descripción</label>
         <textarea
@@ -38,7 +50,7 @@ const FormCatalogos = React.memo(function FormCatalogos({
           <span>Activo</span>
         </label>
       </div>
-      <div className="md:col-span-4 flex gap-2">
+      <div className="md:col-span-5 flex gap-2">
         <Button type="submit" disabled={saving}>
           {saving ? "Guardando…" : editing ? "Actualizar" : "Crear"}
         </Button>
